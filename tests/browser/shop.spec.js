@@ -83,3 +83,13 @@ test('浏览器拒绝保存时仍可操作并说明限制', async ({ page }) => 
   await page.getByRole('link', { name: '购物车，1 件商品', exact: true }).click()
   await expect(page.getByTestId('cart-total')).toHaveText('¥28.00')
 })
+
+test('键盘跳过导航时保持当前页面', async ({ page }) => {
+  await page.goto('/#/cart')
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: '跳到主要内容', exact: true })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('main')).toBeFocused()
+  await expect(page).toHaveURL(/#\/cart$/)
+  await expect(page.getByRole('heading', { name: '购物车还空着呢' })).toBeVisible()
+})

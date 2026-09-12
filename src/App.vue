@@ -2,10 +2,16 @@
 import AppIcon from './components/AppIcon.vue'
 import { useCart } from './composables/useCart.js'
 const { count, storageWarning } = useCart()
+
+function focusMain() {
+  const main = document.getElementById('main-content')
+  main?.focus({ preventScroll: true })
+  main?.scrollIntoView()
+}
 </script>
 
 <template>
-  <a class="skip-link" href="#main-content">跳到主要内容</a>
+  <a class="skip-link" href="#main-content" @click.prevent="focusMain">跳到主要内容</a>
   <div class="announcement"><AppIcon name="sun" /><span>新学期，从一件喜欢的文具开始。</span><span class="announcement-dot">·</span><span class="announcement-end">给日常一点小欢喜</span></div>
   <header class="site-header">
     <div class="header-inner container">
