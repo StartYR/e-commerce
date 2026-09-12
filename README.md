@@ -52,6 +52,14 @@ npm run test:e2e
 - `npm run test:e2e`：通过 Playwright 自动启动构建产物的本地预览，检查桌面与手机尺寸下的选购流程。先执行构建；测试默认使用本机安装的 Google Chrome。使用 Edge 时，可在 PowerShell 中先执行 `$env:PLAYWRIGHT_CHANNEL = 'msedge'`。
 - `npm run preview`：手动预览构建结果。
 
+## 静态页面部署
+
+项目通过 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) 部署到 GitHub Pages。工作流会在 `main` 分支收到新提交时运行，也可以在 GitHub Actions 页面手动启动。它依次安装锁定的依赖、运行购物车逻辑测试、按照 `/e-commerce/` 子路径构建网站，并只发布生成的 `dist/` 目录。
+
+仓库的 Pages 发布来源需要设置为 **GitHub Actions**。部署成功后的默认地址为 <https://startyr.github.io/e-commerce/>。
+
+GitHub Pages 只托管这一阶段的静态前端。未来加入后端和数据库时，可以保留此前端地址，并将 API 请求连接到另行部署的服务器。
+
 ## 后续课程扩展
 
 学到数据库后，可以增加 Node.js + Express 后端，把本地商品数据改为从 MySQL 读取，再逐步实现商品管理和订单。前端页面与商品数据、购物车逻辑已分别放在独立文件中，便于逐步接入。
