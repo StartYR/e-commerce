@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { apiCategories, apiProducts } from '../fixtures/catalog.js'
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/auth/me', (route) => route.fulfill({
@@ -10,6 +11,16 @@ test.beforeEach(async ({ page }) => {
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({ cart: { items: [] } }),
+  }))
+  await page.route('**/api/products', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ products: apiProducts }),
+  }))
+  await page.route('**/api/categories', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ categories: apiCategories }),
   }))
 })
 
@@ -36,6 +47,36 @@ test('商品展示、分类搜索、排序与空结果', async ({ page }, testIn
   await page.getByRole('button', { name: '查看全部好物' }).click()
   await expect(page.locator('.product-card')).toHaveCount(12)
   expect(errors).toEqual([])
+})
+
+test('商品业务字段来自同源商品 API', async ({ page }) => {
+  await page.unroute('**/api/products')
+  await page.route('**/api/products', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      products: apiProducts.map((product) => product.id === 'notebook'
+        ? {
+            ...product,
+            name: '数据库 · 动态笔记本',
+            description: '此名称、描述、价格和库存来自 API',
+            priceCents: 4321,
+            stock: 0,
+            categoryId: 'desk',
+            categoryName: '桌面小物',
+          }
+        : product),
+    }),
+  }))
+
+  await page.goto('/')
+  const card = page.locator('[data-product-id="notebook"]')
+  await expect(card.getByRole('heading')).toHaveText('数据库 · 动态笔记本')
+  await expect(card).toContainText('此名称、描述、价格和库存来自 API')
+  await expect(card).toContainText('¥43.21')
+  await expect(card.getByRole('button', { name: '数据库 · 动态笔记本暂时售罄' })).toBeDisabled()
+  await page.getByRole('button', { name: '桌面小物', exact: true }).click()
+  await expect(card).toBeVisible()
 })
 
 test('添加、合并、修改数量、金额计算、刷新恢复与删除', async ({ page }, testInfo) => {

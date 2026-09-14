@@ -7,9 +7,11 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "node --watch src/server.js",
+    "dev": "node --env-file-if-exists=.env --watch src/server.js",
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "db:setup": "node --env-file=.env scripts/setup-database.js",
+    "test:db": "node --env-file=.env --test integration/database.js"
   },
   "dependencies": {
     "argon2": "^0.45.1",

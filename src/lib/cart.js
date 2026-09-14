@@ -1,8 +1,5 @@
-import { products } from '../data/products.js'
-
 export const CART_KEY = 'shiye-cart-v1'
 export const MAX_QUANTITY = 99
-const productIds = new Set(products.map((product) => product.id))
 
 export function normalizeQuantity(value) {
   const quantity = Number(value)
@@ -13,7 +10,7 @@ export function sanitizeCart(value) {
   if (!Array.isArray(value)) return []
   const quantities = new Map()
   for (const item of value) {
-    if (!item || !productIds.has(item.productId)) continue
+    if (!item || typeof item.productId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(item.productId)) continue
     if (!Number.isInteger(item.quantity) || item.quantity < 1) continue
     quantities.set(item.productId, Math.min(MAX_QUANTITY, (quantities.get(item.productId) ?? 0) + item.quantity))
   }
@@ -31,13 +28,13 @@ export function readCart(storage) {
   }
 }
 
-export function getCartLines(items) {
-  return sanitizeCart(items).map((item) => ({
-    ...item,
-    product: products.find((product) => product.id === item.productId),
-  }))
+export function getCartLines(items, products) {
+  return sanitizeCart(items).flatMap((item) => {
+    const product = products.find((candidate) => candidate.id === item.productId)
+    return product ? [{ ...item, product }] : []
+  })
 }
 
-export function getCartTotal(items) {
-  return getCartLines(items).reduce((total, { product, quantity }) => total + product.price * quantity, 0)
+export function getCartTotal(items, products) {
+  return getCartLines(items, products).reduce((total, { product, quantity }) => total + product.price * quantity, 0)
 }

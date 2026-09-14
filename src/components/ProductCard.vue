@@ -9,6 +9,7 @@ const emit = defineEmits(['add'])
 const recentlyAdded = ref(false)
 let timer
 function add(product) {
+  if (!product.isActive || product.stock <= 0) return
   emit('add', product)
   recentlyAdded.value = true
   clearTimeout(timer)
@@ -29,8 +30,8 @@ onUnmounted(() => clearTimeout(timer))
       <p>{{ product.description }}</p>
       <div class="product-bottom">
         <span class="price"><span class="currency">¥</span>{{ formatMoney(product.price) }}</span>
-        <button class="add-button" :class="{ added: recentlyAdded }" :aria-label="`将${product.name}加入购物车`" @click="add(product)">
-          <AppIcon :name="recentlyAdded ? 'check' : 'plus'" /><span>{{ recentlyAdded ? '已选择' : '加入购物车' }}</span>
+        <button class="add-button" :class="{ added: recentlyAdded }" :disabled="!product.isActive || product.stock <= 0" :aria-label="product.stock > 0 ? `将${product.name}加入购物车` : `${product.name}暂时售罄`" @click="add(product)">
+          <AppIcon :name="recentlyAdded ? 'check' : 'plus'" /><span>{{ product.stock <= 0 ? '暂时售罄' : recentlyAdded ? '已选择' : '加入购物车' }}</span>
         </button>
       </div>
     </div>

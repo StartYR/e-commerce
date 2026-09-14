@@ -3,18 +3,19 @@ import { computed, onUnmounted, ref } from 'vue'
 import AppIcon from '../components/AppIcon.vue'
 import ProductArt from '../components/ProductArt.vue'
 import ProductCard from '../components/ProductCard.vue'
-import { categories, products } from '../data/products.js'
+import { useCatalog } from '../composables/useCatalog.js'
 import { useCart } from '../composables/useCart.js'
 
 const category = ref('all')
 const query = ref('')
 const sort = ref('featured')
 const notice = ref('')
+const { products, categories, loading, error: catalogError, load: loadCatalog } = useCatalog()
 const { add } = useCart()
 let noticeTimer
 const filteredProducts = computed(() => {
   const search = query.value.trim().toLocaleLowerCase()
-  const result = products.filter((product) =>
+  const result = products.value.filter((product) =>
     (category.value === 'all' || product.category === category.value)
     && `${product.name} ${product.description}`.toLocaleLowerCase().includes(search),
   )
@@ -84,7 +85,9 @@ onUnmounted(() => clearTimeout(noticeTimer))
         <p aria-live="polite">共 <strong>{{ filteredProducts.length }}</strong> 件好物<span v-if="query.trim()"> · 搜索“{{ query.trim() }}”</span></p>
         <label class="sort-field"><span class="sr-only">商品排序</span><select v-model="sort" aria-label="商品排序"><option value="featured">小店推荐</option><option value="price-asc">价格从低到高</option><option value="price-desc">价格从高到低</option></select><AppIcon name="chevron" /></label>
       </div>
-      <div v-if="filteredProducts.length" class="product-grid">
+      <div v-if="loading" class="empty-state search-empty" aria-live="polite"><p>正在读取商品…</p></div>
+      <div v-else-if="catalogError" class="empty-state search-empty"><h3>商品暂时无法加载</h3><p>请检查网络后重试。</p><button class="secondary-button" @click="loadCatalog({ force: true }).catch(() => {})">重新加载<AppIcon name="arrow" /></button></div>
+      <div v-else-if="filteredProducts.length" class="product-grid">
         <ProductCard v-for="product in filteredProducts" :key="product.id" :product="product" @add="addProduct" />
       </div>
       <div v-else class="empty-state search-empty"><span class="empty-icon"><AppIcon name="search" /></span><h3>还没找到这件好物</h3><p>换个关键词，或看看其他分类吧。</p><button class="secondary-button" @click="resetFilters">查看全部好物<AppIcon name="arrow" /></button></div>

@@ -2,12 +2,15 @@
 import { onMounted, ref } from 'vue'
 import AppIcon from './components/AppIcon.vue'
 import { useAuth } from './composables/useAuth.js'
+import { useCatalog } from './composables/useCatalog.js'
 import { useCart } from './composables/useCart.js'
 const { count, storageWarning } = useCart()
 const { user, ready, refresh, logout } = useAuth()
+const { error: catalogError, load: loadCatalog } = useCatalog()
 const accountError = ref('')
 
 onMounted(() => {
+  loadCatalog().catch(() => {})
   refresh().catch(() => {
     accountError.value = '暂时无法确认登录状态。'
   })
@@ -54,6 +57,7 @@ function focusMain() {
     </div>
   </header>
   <div v-if="accountError" class="storage-warning container" role="alert">{{ accountError }}</div>
+  <div v-if="catalogError" class="storage-warning container" role="alert">{{ catalogError }}</div>
   <div v-if="storageWarning" class="storage-warning container" role="alert">{{ storageWarning }}</div>
   <RouterView />
   <footer class="site-footer">

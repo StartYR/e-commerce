@@ -1,7 +1,8 @@
 import { computed, ref, watch } from 'vue'
-import { CART_KEY, MAX_QUANTITY, getCartLines, getCartTotal, normalizeQuantity, readCart } from '../lib/cart.js'
-import { products } from '../data/products.js'
+import { CART_KEY, MAX_QUANTITY, getCartLines, normalizeQuantity, readCart } from '../lib/cart.js'
+import { presentProduct } from '../data/products.js'
 import { useAuth } from './useAuth.js'
+import { useCatalog } from './useCatalog.js'
 
 const guestItems = ref([])
 const remoteLines = ref([])
@@ -10,6 +11,7 @@ const loading = ref(false)
 const updating = ref(false)
 const error = ref('')
 const { user } = useAuth()
+const { products } = useCatalog()
 let remoteQueue = Promise.resolve()
 let remoteGeneration = 0
 let remoteLoaded = false
@@ -32,20 +34,11 @@ function persistGuestCart() {
 function normalizeRemoteCart(cart) {
   if (!Array.isArray(cart?.items)) return []
   return cart.items.flatMap((item) => {
-    const presentation = products.find((product) => product.id === item?.productId)
-    if (!presentation || !Number.isInteger(item.quantity) || item.quantity < 1) return []
+    if (!item || !Number.isInteger(item.quantity) || item.quantity < 1) return []
     return [{
       productId: item.productId,
       quantity: Math.min(MAX_QUANTITY, item.quantity),
-      product: {
-        ...presentation,
-        name: item.name,
-        description: item.description,
-        price: Number(item.priceCents),
-        category: item.categoryId,
-        stock: Number(item.stock),
-        isActive: Boolean(item.isActive),
-      },
+      product: presentProduct(item),
     }]
   })
 }
@@ -111,11 +104,9 @@ watch(user, (currentUser) => {
   remoteQueue = loadRemoteCart(currentUser.id, generation).catch(() => {})
 })
 
-const lines = computed(() => user.value ? remoteLines.value : getCartLines(guestItems.value))
+const lines = computed(() => user.value ? remoteLines.value : getCartLines(guestItems.value, products.value))
 const count = computed(() => lines.value.reduce((sum, item) => sum + item.quantity, 0))
-const total = computed(() => user.value
-  ? lines.value.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
-  : getCartTotal(guestItems.value))
+const total = computed(() => lines.value.reduce((sum, item) => sum + item.product.price * item.quantity, 0))
 const storageWarning = computed(() => user.value ? '' : guestStorageWarning.value)
 
 function queueRemoteMutation(operation) {
@@ -150,7 +141,8 @@ function queueRemoteMutation(operation) {
 
 export function useCart() {
   async function add(productId) {
-    if (!products.some((product) => product.id === productId)) return false
+    const product = products.value.find((candidate) => candidate.id === productId)
+    if (!product || !product.isActive || product.stock <= 0) return false
     if (user.value) {
       const cart = await queueRemoteMutation(async () => {
         const item = remoteLines.value.find((line) => line.productId === productId)
