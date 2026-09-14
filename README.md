@@ -1,74 +1,55 @@
 # 拾页 · 文具小店
 
-数据库课程项目：前端使用 Vue 3、Vite 和 JavaScript，后端使用 Node.js、Express 和 `mysql2`。商品、登录购物车和订单业务数据来自 MySQL，浏览器只通过同源 `/api/*` 访问后端；游客购物车仍保存在浏览器中。项目暂未接入真实支付。
+一个已经投入生产运行的数据库课程电子商务项目。项目采用 Vue 3 单页前端、Cloudflare Worker 边缘入口、Express API、Nginx 源站代理和 MySQL 8.4；商品、账户、Session、登录购物车与订单均由 MySQL 持久化。当前版本没有真实支付、退款或物流流程。
 
-## 本地启动
+- 正式网站：<https://shop.yirui.io>
+- 后端源站：`https://api.startyi.cn`（只接受 Worker 注入的源站代理凭据，浏览器不应直接调用）
+- Worker 名称：`shop`
 
-需要 Node.js 22.12 或更高版本，使用 npm 管理依赖。
+## 组件边界
+
+| 组件 | 当前职责 |
+| --- | --- |
+| Cloudflare Worker | 提供构建后的 Static Assets；将同源 `/api/*` 固定代理到 `api.startyi.cn` |
+| Vue 前端 | History 路由、页面交互、游客本地购物车和同源 API 客户端 |
+| Express 后端 | 商品、认证、Session、登录购物车与订单业务逻辑 |
+| Nginx | `api.startyi.cn` 的 TLS 入口并反向代理至 `127.0.0.1:3000` |
+| MySQL | 保存全部业务数据并提供事务、约束、外键与索引 |
+| systemd | 以受限账户 `agent` 运行和守护 Express 服务 |
+
+完整生产链路：`shop.yirui.io → Worker → api.startyi.cn → Nginx → Express → MySQL`。
+
+## 文档入口
+
+| 文档 | 内容 |
+| --- | --- |
+| [架构](docs/architecture.md) | 系统组件、请求链路、代码结构、API 与数据归属 |
+| [部署](docs/deployment.md) | 当前生产拓扑、发布流程、路径、端口和职责划分 |
+| [数据库](docs/database.md) | 表关系、索引、外键、Session 与下单事务 |
+| [运维](docs/operations.md) | 重启、reload、日志、健康检查、故障定位和回滚 |
+| [安全](docs/security.md) | 信任边界、Secret、Cookie、数据库权限和 `agent` sudo 白名单 |
+| [初始部署计划（历史）](docs/history/initial-deployment-plan.md) | Phase 0–10 实施前的计划，仅供追溯 |
+
+## 本地开发
+
+要求 Node.js `>=22.12.0`、npm 和 MySQL 8.4。真实配置写入被 Git 忽略的 `backend/.env`，变量名及占位说明见 [backend/.env.example](backend/.env.example)。不要将密码或 Secret 写入仓库。
 
 ```sh
 npm install
-npm run dev
-```
-
-在浏览器打开终端显示的本地地址，一般为 http://127.0.0.1:5173。停止服务时在终端按 `Ctrl+C`。
-
-后端是位于 `backend/` 的独立 npm 包。本地开发会读取被 Git 忽略的 `backend/.env`，变量名和占位示例见 [backend/.env.example](backend/.env.example)。管理员初始化使用 MySQL `ecommerce-setup` login-path，管理员密码不会写入项目；应用运行始终使用 `.env` 中的 `ecommerce_app`：
-
-```sh
 npm --prefix backend install
 npm --prefix backend run db:setup
 npm --prefix backend run dev
 ```
 
-另开一个终端运行根目录的 `npm run dev`。初始化脚本依次执行 `database/schema.sql`、`database/seed.sql`，并创建或更新只有本项目数据库 DML 权限的 `ecommerce_app@localhost`。
+另开终端启动 Vite：
 
-## 已有功能
+```sh
+npm run dev
+```
 
-- 12 件示例商品，分为纸本手帐、书写工具、桌面小物和收纳随行。
-- 商品分类、名称及描述搜索、价格升降序排列。
-- 加入购物车、合并相同商品、修改数量、移除商品、自动计算总价。
-- 购物车刷新后保留；数量限定为 1–99 的整数；处理失效商品和损坏的保存数据。
-- 空购物车、搜索无结果、添加反馈和保存失败提示。
-- 适配电脑与手机，支持键盘操作和减少动态效果设置。
-- 商品插画和图标均为项目内的 SVG，无需第三方图片或字体服务。
-- 后端提供商品、单件商品和分类查询 API；生产模式会先验证来自 Cloudflare Worker 的 Origin Proxy Token。
-- 注册和登录密码使用 Argon2id 哈希，服务端只保存 Session Token 哈希；生产 Cookie 为 Host-only、HttpOnly、Secure、SameSite=Lax。
-- 登录用户购物车写入 MySQL，游客购物车继续使用 `localStorage`；退出登录后恢复游客购物车。
-- 登录用户可以创建 `placed` 订单并查看自己的订单历史与详情；下单事务保存价格快照、并发安全扣减库存并清空购物车。
+Vite 通过开发代理把 `/api/*` 转发到 `http://127.0.0.1:3000`。数据库初始化默认使用本机 MySQL login-path `ecommerce-setup`；应用运行只使用 `ecommerce_app` 限权账户。
 
-游客购物车仅在相同浏览器、相同网站地址下保存；登录购物车由数据库持久化。演示商品及价格不代表实际在售商品。
-
-## 从哪里修改
-
-| 文件 | 内容 |
-| --- | --- |
-| [src/data/products.js](src/data/products.js) | 仅包含商品插画、颜色、徽标和展示顺序映射，不保存商品业务数据 |
-| [src/composables/useCatalog.js](src/composables/useCatalog.js) | 从同源商品 API 加载名称、描述、分类、价格和库存 |
-| [src/views/ShopView.vue](src/views/ShopView.vue) | 商店首页、搜索与分类 |
-| [src/views/CartView.vue](src/views/CartView.vue) | 购物车页面 |
-| [src/composables/useCart.js](src/composables/useCart.js) | 游客本地购物车与登录数据库购物车切换逻辑 |
-| [src/composables/useOrders.js](src/composables/useOrders.js) | 同源订单 API、下单与历史订单状态 |
-| [src/views/OrdersView.vue](src/views/OrdersView.vue) | 当前用户的订单历史页面 |
-| [src/views/OrderView.vue](src/views/OrderView.vue) | 校验归属后的订单详情页面 |
-| [src/lib/cart.js](src/lib/cart.js) | 数量校验、恢复数据和金额计算 |
-| [src/components/ProductArt.vue](src/components/ProductArt.vue) | 商品 SVG 插画 |
-| [src/style.css](src/style.css) | 网站颜色、布局和手机适配 |
-| [backend/src](backend/src) | Express 入口、配置、数据库访问、中间件和 API 路由 |
-| [src/composables/useAuth.js](src/composables/useAuth.js) | 前端登录状态和同源认证 API 调用 |
-| [src/views/LoginView.vue](src/views/LoginView.vue) | 登录页面 |
-| [src/views/RegisterView.vue](src/views/RegisterView.vue) | 注册页面 |
-| [database/schema.sql](database/schema.sql) | MySQL 表、约束、外键和索引 |
-| [database/seed.sql](database/seed.sql) | 分类、商品和固定初始库存 |
-| [worker/index.js](worker/index.js) | Cloudflare Worker 的固定源站 API 代理与 Static Assets 分流 |
-| [wrangler.jsonc](wrangler.jsonc) | Worker `shop`、SPA fallback、静态资源目录和 required secret 声明 |
-| [deploy/ecommerce.service](deploy/ecommerce.service) | 以 `agent` 运行、读取受保护环境文件的 systemd 服务 |
-| [deploy/nginx-api.startyi.cn.conf](deploy/nginx-api.startyi.cn.conf) | 复用现有证书并代理到回环地址的独立 Nginx 站点 |
-| [deploy/install-backend-release.sh](deploy/install-backend-release.sh) | 无 sudo 安装生产依赖、检查后端并原子切换 release |
-
-页面使用 `/`、`/cart`、`/login`、`/register`、`/orders` 和 `/orders/:id` 等 History 路由地址。部署静态资源时，托管层需要为这些前端路由提供 SPA fallback。
-
-## 构建与检查
+## 构建与验证
 
 ```sh
 npm test
@@ -78,21 +59,4 @@ npm --prefix backend run test:db
 npm run test:live
 ```
 
-- `npm test`：检查前端购物车、商品目录、Worker 代理边界，以及不依赖真实数据库的后端 API、配置、订单事务和 SQL 参数化行为。
-- `npm run build`：生成 `dist/` 目录。
-- `npm run test:e2e`：通过 Playwright 自动启动构建产物的本地预览，检查桌面与手机尺寸下的选购流程。先执行构建；测试默认使用本机安装的 Google Chrome。使用 Edge 时，可在 PowerShell 中先执行 `$env:PLAYWRIGHT_CHANNEL = 'msedge'`。
-- `npm --prefix backend run test:db`：使用 `backend/.env` 中的限权应用账户，真实验证商品、认证、Session、购物车、订单价格快照、回滚、归属隔离和并发库存安全。
-- `npm run test:live`：自动启动真实后端和 Vite，通过浏览器验证 MySQL 商品、认证、登录购物车、下单和订单历史流程。
-- `npm run preview`：手动预览构建结果。
-
-## 部署目标
-
-`npm run build` 生成可部署的 `dist/` 目录，构建不依赖 GitHub Pages 的 `/e-commerce/` 子路径。
-
-最终部署架构以 [deployment-plan.md](deployment-plan.md) 为准：前端静态资源由 Cloudflare Worker + Static Assets 提供，浏览器通过同源 `/api/*` 访问后端。当前数据库初始化仅针对本机开发环境，生产部署仍在后续阶段完成。
-
-`wrangler.jsonc` 只声明普通配置和必需 Secret 名称，不保存 Secret 值，也不接管已经在 Cloudflare Dashboard 绑定的 Custom Domain。
-
-## 后续课程扩展
-
-后续阶段可在现有订单边界上继续扩展支付、退款和物流；这些能力不属于当前第一版。
+生产发布和回滚不得只依据本页操作，请遵循 [部署文档](docs/deployment.md) 与 [运维文档](docs/operations.md)。

@@ -1,10 +1,13 @@
-# e-commerce 最终架构与部署规范
+# e-commerce 初始部署计划（历史归档）
+
+> [!IMPORTANT]
+> 本文档是 Phase 0–10 实施前使用的历史计划，保留用于追溯，不再描述当前状态，也不再作为部署操作依据。当前架构、部署与运维说明分别见 [`../architecture.md`](../architecture.md)、[`../deployment.md`](../deployment.md) 和 [`../operations.md`](../operations.md)。
 
 > 项目目录：`D:\Code\Projects\e-commerce`  
 > 项目性质：数据库系统原理课程作业  
 > 对外地址：`https://shop.yirui.io`  
 > 后端源站：`https://api.startyi.cn`  
-> 本文档用于约束后续 Codex 的开发与部署行为。除非用户明确修改本方案，否则以本文档为准。
+> 本文档曾用于约束 Phase 0–10 的开发与部署行为；阶段完成后已停止作为当前依据。
 > 外部平台前置条件已于 2026-09-14 按实际环境复核；后文所列状态以本版本为准。
 
 ---
