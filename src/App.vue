@@ -1,7 +1,26 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import AppIcon from './components/AppIcon.vue'
+import { useAuth } from './composables/useAuth.js'
 import { useCart } from './composables/useCart.js'
 const { count, storageWarning } = useCart()
+const { user, ready, refresh, logout } = useAuth()
+const accountError = ref('')
+
+onMounted(() => {
+  refresh().catch(() => {
+    accountError.value = '暂时无法确认登录状态。'
+  })
+})
+
+async function signOut() {
+  accountError.value = ''
+  try {
+    await logout()
+  } catch {
+    accountError.value = '退出失败，请稍后再试。'
+  }
+}
 
 function focusMain() {
   const main = document.getElementById('main-content')
@@ -23,9 +42,18 @@ function focusMain() {
         <RouterLink to="/" class="nav-link" exact-active-class="current">逛逛小店</RouterLink>
         <RouterLink to="/cart" class="nav-link" exact-active-class="current">我的购物车</RouterLink>
       </nav>
-      <RouterLink to="/cart" class="header-cart" :aria-label="`购物车，${count} 件商品`"><AppIcon name="bag" /><span class="cart-label">购物车</span><span class="cart-count">{{ count }}</span></RouterLink>
+      <div class="header-actions">
+        <span v-if="!ready" class="account-state" aria-label="正在确认登录状态">账户…</span>
+        <template v-else-if="user">
+          <span class="account-name">{{ user.username }}</span>
+          <button class="account-action" type="button" @click="signOut">退出</button>
+        </template>
+        <RouterLink v-else to="/login" class="account-action">登录</RouterLink>
+        <RouterLink to="/cart" class="header-cart" :aria-label="`购物车，${count} 件商品`"><AppIcon name="bag" /><span class="cart-label">购物车</span><span class="cart-count">{{ count }}</span></RouterLink>
+      </div>
     </div>
   </header>
+  <div v-if="accountError" class="storage-warning container" role="alert">{{ accountError }}</div>
   <div v-if="storageWarning" class="storage-warning container" role="alert">{{ storageWarning }}</div>
   <RouterView />
   <footer class="site-footer">

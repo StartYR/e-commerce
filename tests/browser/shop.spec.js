@@ -1,5 +1,18 @@
 import { test, expect } from '@playwright/test'
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/auth/me', (route) => route.fulfill({
+    status: 401,
+    contentType: 'application/json',
+    body: JSON.stringify({ error: { code: 'AUTH_REQUIRED', message: 'Authentication required' } }),
+  }))
+  await page.route('**/api/cart', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ cart: { items: [] } }),
+  }))
+})
+
 test('商品展示、分类搜索、排序与空结果', async ({ page }, testInfo) => {
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
@@ -66,7 +79,7 @@ test('添加、合并、修改数量、金额计算、刷新恢复与删除', as
 
 test('损坏的购物车数据可恢复，路由可直接刷新', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('shiye-cart-v1', '{broken'))
-  await page.goto('/#/cart')
+  await page.goto('/cart')
   await expect(page.getByRole('heading', { name: '购物车还空着呢' })).toBeVisible()
   await page.getByRole('link', { name: '去逛逛小店', exact: true }).click()
   await page.getByRole('button', { name: '将原野 · 布面笔记本加入购物车', exact: true }).click()
@@ -85,11 +98,110 @@ test('浏览器拒绝保存时仍可操作并说明限制', async ({ page }) => 
 })
 
 test('键盘跳过导航时保持当前页面', async ({ page }) => {
-  await page.goto('/#/cart')
+  await page.goto('/cart')
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: '跳到主要内容', exact: true })).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(page.locator('main')).toBeFocused()
-  await expect(page).toHaveURL(/#\/cart$/)
+  await expect(page).toHaveURL(/\/cart$/)
   await expect(page.getByRole('heading', { name: '购物车还空着呢' })).toBeVisible()
+})
+
+test('注册使用同源 API 并在成功后更新账户状态', async ({ page }) => {
+  let requestBody
+  await page.route('**/api/auth/register', async (route) => {
+    requestBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ user: { id: '1', username: 'reader_1', email: 'reader@example.com' } }),
+    })
+  })
+
+  await page.goto('/register')
+  await page.getByRole('textbox', { name: /^用户名/ }).fill('reader_1')
+  await page.getByRole('textbox', { name: '邮箱', exact: true }).fill('reader@example.com')
+  await page.getByLabel(/^密码/).fill('password123')
+  await page.getByRole('button', { name: '创建账号', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByText('reader_1', { exact: true })).toBeVisible()
+  expect(requestBody).toEqual({ username: 'reader_1', email: 'reader@example.com', password: 'password123' })
+})
+
+test('登录和退出都使用同源 Session API', async ({ page }) => {
+  await page.route('**/api/auth/login', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ user: { id: '1', username: 'reader', email: 'reader@example.com' } }),
+  }))
+  await page.route('**/api/auth/logout', (route) => route.fulfill({ status: 204 }))
+
+  await page.goto('/login')
+  await page.getByRole('textbox', { name: '用户名或邮箱' }).fill('reader')
+  await page.getByLabel('密码', { exact: true }).fill('password123')
+  await page.getByRole('button', { name: '登录', exact: true }).click()
+  await expect(page.getByText('reader', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: '退出', exact: true }).click()
+  await expect(page.getByRole('link', { name: '登录', exact: true })).toBeVisible()
+})
+
+test('登录用户使用数据库购物车，退出后恢复游客购物车', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('shiye-cart-v1', JSON.stringify({
+    version: 1,
+    items: [{ productId: 'gel-pens', quantity: 1 }],
+  })))
+  await page.route('**/api/auth/login', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ user: { id: '1', username: 'reader', email: 'reader@example.com' } }),
+  }))
+  await page.route('**/api/auth/logout', (route) => route.fulfill({ status: 204 }))
+  await page.unroute('**/api/cart')
+
+  let quantity = 2
+  const databaseCart = () => ({
+    cart: {
+      items: [{
+        productId: 'notebook',
+        quantity,
+        name: '原野 · 布面笔记本',
+        description: 'A5 / 横线内页 / 160 页',
+        priceCents: 2800,
+        stock: 68,
+        isActive: true,
+        categoryId: 'paper',
+        categoryName: '纸本手帐',
+      }],
+    },
+  })
+  await page.route('**/api/cart', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(databaseCart()),
+  }))
+  await page.route('**/api/cart/items/notebook', async (route) => {
+    quantity = route.request().postDataJSON().quantity
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(databaseCart()),
+    })
+  })
+
+  await page.goto('/login')
+  await page.getByRole('textbox', { name: '用户名或邮箱' }).fill('reader')
+  await page.getByLabel('密码', { exact: true }).fill('password123')
+  await page.getByRole('button', { name: '登录', exact: true }).click()
+  await expect(page.getByRole('link', { name: '购物车，2 件商品', exact: true })).toBeVisible()
+
+  await page.getByRole('link', { name: '购物车，2 件商品', exact: true }).click()
+  await expect(page.getByTestId('cart-total')).toHaveText('¥56.00')
+  await page.getByRole('button', { name: '增加原野 · 布面笔记本数量', exact: true }).click()
+  await expect(page.getByTestId('cart-total')).toHaveText('¥84.00')
+
+  await page.getByRole('button', { name: '退出', exact: true }).click()
+  await expect(page.getByRole('link', { name: '购物车，1 件商品', exact: true })).toBeVisible()
+  await expect(page.getByTestId('cart-total')).toHaveText('¥12.00')
 })

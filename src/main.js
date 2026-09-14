@@ -1,15 +1,19 @@
 import { createApp, nextTick } from 'vue'
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import ShopView from './views/ShopView.vue'
 import CartView from './views/CartView.vue'
+import LoginView from './views/LoginView.vue'
+import RegisterView from './views/RegisterView.vue'
 import './style.css'
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes: [
     { path: '/', component: ShopView, meta: { title: '拾页 · 文具小店' } },
     { path: '/cart', component: CartView, meta: { title: '我的购物车 · 拾页' } },
+    { path: '/login', component: LoginView, meta: { title: '登录 · 拾页' } },
+    { path: '/register', component: RegisterView, meta: { title: '创建账号 · 拾页' } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: () => ({ top: 0 }),

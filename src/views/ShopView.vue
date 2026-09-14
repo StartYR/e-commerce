@@ -23,8 +23,12 @@ const filteredProducts = computed(() => {
   return result
 })
 
-function addProduct(product) {
-  notice.value = add(product.id) ? `已将「${product.name}」加入购物车` : '这件商品已经选了 99 件，先看看其他好物吧。'
+async function addProduct(product) {
+  try {
+    notice.value = await add(product.id) ? `已将「${product.name}」加入购物车` : '这件商品已经选了 99 件，先看看其他好物吧。'
+  } catch {
+    notice.value = '购物车更新失败，请稍后再试。'
+  }
   clearTimeout(noticeTimer)
   noticeTimer = setTimeout(() => { notice.value = '' }, 3000)
 }

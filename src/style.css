@@ -60,6 +60,11 @@ button, a { touch-action: manipulation; }
 /* 字号：页眉右侧购物车文字 */
 .header-cart { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; }
 .header-cart > svg { width: 20px; height: 20px; }
+.header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 14px; }
+.account-state, .account-name, .account-action { font-size: 12px; color: #6f796b; white-space: nowrap; }
+.account-name { max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+.account-action { background: transparent; padding: 8px 2px; }
+.account-action:hover { color: var(--green); }
 /* 字号：页眉购物车数量徽标 */
 .cart-count { background: var(--green); color: #fff; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 20px; font-size: 10px; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
 /* 字号：浏览器无法保存购物车时的警告 */
@@ -202,6 +207,7 @@ button, a { touch-action: manipulation; }
 .cart-heading h1 span { display: inline-block; margin-left: 20px; font: 12px "Microsoft YaHei", "PingFang SC", sans-serif; letter-spacing: .3px; color: #929582; }
 /* 字号：购物车页右侧商品件数 */
 .cart-heading-count { font-size: 12px; color: #829171; padding-bottom: 5px; white-space: nowrap; }
+.cart-operation-error { margin: -18px 0 24px; color: #9b4f45; font-size: 12px; }
 .cart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 305px; gap: 38px; align-items: start; }
 .cart-table-header, .cart-row { display: grid; grid-template-columns: minmax(0, 1fr) 105px 95px 28px; column-gap: 15px; align-items: center; }
 /* 字号：购物车表头“商品、数量、小计” */
@@ -265,6 +271,21 @@ button, a { touch-action: manipulation; }
 .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 18px; background: #eaf0e2; padding: 12px 21px; border-radius: 5px; color: var(--green); font-size: 12px; }
 .secondary-button svg { width: 17px; height: 17px; }
 
+.auth-main { min-height: calc(100vh - 234px); display: grid; place-items: center; padding-block: 56px 80px; }
+.auth-card { width: min(100%, 460px); padding: 42px; border: 1px solid var(--line); border-radius: 10px; background: #faf8f1; box-shadow: 0 18px 50px #43553e12; }
+.auth-card h1 { margin-top: 12px; font: 600 31px var(--serif); letter-spacing: 1px; }
+.auth-intro { margin-top: 14px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.auth-form { display: grid; gap: 19px; margin-top: 28px; }
+.auth-form label { display: grid; gap: 8px; color: #596456; font-size: 12px; }
+.auth-form input { width: 100%; min-height: 44px; border: 1px solid #dfe2d8; border-radius: 5px; background: #fffefb; color: #303b33; padding: 10px 12px; }
+.auth-form input:focus { border-color: #75946e; }
+.auth-form small { color: #92978b; font-size: 10px; line-height: 1.5; }
+.auth-error { color: #9a453d; background: #f7e9e5; border-radius: 5px; padding: 10px 12px; font-size: 12px; line-height: 1.6; }
+.auth-submit { width: 100%; margin-top: 2px; }
+.auth-submit:disabled { opacity: .65; transform: none; }
+.auth-alternate { margin-top: 23px; text-align: center; color: var(--muted); font-size: 11px; }
+.auth-alternate a { color: var(--green); font-weight: 600; }
+
 @media (min-width: 1500px) {
   .hero { min-height: 460px; }
   .hero-copy { padding-top: 52px; }
@@ -326,6 +347,12 @@ button, a { touch-action: manipulation; }
   /* 字号：手机页眉购物车文字 */
   .header-cart { gap: 8px; font-size: 11px; }
   .header-cart svg { width: 19px; height: 19px; }
+  .header-actions { gap: 9px; }
+  .account-name { max-width: 68px; font-size: 10px; }
+  .account-action, .account-state { font-size: 10px; }
+  .auth-main { padding-block: 30px 54px; }
+  .auth-card { padding: 30px 22px; }
+  .auth-card h1 { font-size: 26px; }
   .shop-main { padding-top: 18px; }
   .hero { display: flex; flex-direction: column; min-height: auto; border-radius: 8px; }
   .hero-copy { padding: 30px 25px 0; }

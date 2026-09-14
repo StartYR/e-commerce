@@ -8,7 +8,9 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test tests/cart.test.js",
+    "test": "node --test tests/cart.test.js && npm --prefix backend test",
+    "test:frontend": "node --test tests/cart.test.js",
+    "test:backend": "npm --prefix backend test",
     "test:e2e": "playwright test"
   },
   "dependencies": {
