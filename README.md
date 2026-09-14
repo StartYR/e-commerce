@@ -6,6 +6,8 @@
 - 后端源站：`https://api.startyi.cn`（只接受 Worker 注入的源站代理凭据，浏览器不应直接调用）
 - Worker 名称：`shop`
 
+![Home](/docs/image/Home.webp)
+
 ## 组件边界
 
 | 组件 | 当前职责 |
