@@ -42,11 +42,21 @@ function createFakeCartService(overrides = {}) {
   }
 }
 
+function createFakeOrderService(overrides = {}) {
+  return {
+    create: async () => { throw new Error('not implemented in this test') },
+    list: async () => [],
+    get: async () => { throw new Error('not implemented in this test') },
+    ...overrides,
+  }
+}
+
 function createTestApp(options = {}) {
   return createApp({
     productService: createFakeProductService(),
     authService: createFakeAuthService(),
     cartService: createFakeCartService(),
+    orderService: createFakeOrderService(),
     sessionConfig: { cookieName: 'shiye_session', ttlDays: 7, secure: false },
     ...options,
   })

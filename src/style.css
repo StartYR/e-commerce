@@ -254,6 +254,7 @@ button, a { touch-action: manipulation; }
 /* 字号：购物车总价货币符号 */
 .summary-total strong span { font-size: 15px; font-weight: 400; margin-right: 4px; }
 .cart-summary > .primary-button { width: 100%; }
+.cart-summary > button.primary-button:disabled { opacity: .65; transform: none; }
 /* 字号：购物车汇总卡片底部说明 */
 .summary-note { text-align: center; font-size: 10px; line-height: 1.9; color: #90987e; margin-top: 17px; }
 .empty-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 65px 20px; }
@@ -285,6 +286,31 @@ button, a { touch-action: manipulation; }
 .auth-submit:disabled { opacity: .65; transform: none; }
 .auth-alternate { margin-top: 23px; text-align: center; color: var(--muted); font-size: 11px; }
 .auth-alternate a { color: var(--green); font-weight: 600; }
+
+.orders-main { min-height: calc(100vh - 234px); padding-top: 32px; padding-bottom: 72px; }
+.order-list { display: grid; gap: 14px; }
+.order-card { display: flex; justify-content: space-between; gap: 24px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 8px; background: #fafaf5; }
+.order-card:hover { border-color: #cfd7c7; }
+.order-card > div { display: flex; align-items: center; gap: 18px; }
+.order-card > div:first-child { align-items: flex-start; flex-direction: column; gap: 7px; }
+.order-card span { font-size: 12px; color: #687360; }
+.order-card time { font-size: 10px; color: #92978b; }
+.order-card strong { color: var(--green); font: 600 18px "Segoe UI", sans-serif; }
+.order-card em, .order-detail header span { padding: 5px 9px; border-radius: 20px; background: #e7eee0; color: #607254; font-size: 9px; font-style: normal; letter-spacing: 1px; }
+.order-detail-error { margin-top: 20px; }
+.order-detail { max-width: 860px; margin: 34px auto 0; border: 1px solid var(--line); border-radius: 10px; background: #fafaf5; overflow: hidden; }
+.order-detail > header { padding: 30px; border-bottom: 1px solid var(--line); }
+.order-detail h1 { margin-top: 10px; font: 600 28px var(--serif); }
+.order-detail header > p:last-child { display: flex; align-items: center; gap: 12px; margin-top: 13px; color: #8a8f82; font-size: 11px; }
+.order-detail > section { padding: 0 30px; }
+.order-item { display: grid; grid-template-columns: minmax(0, 1fr) 150px 100px; gap: 18px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--line); }
+.order-item h2 { font-size: 13px; font-weight: 500; }
+.order-item p { margin-top: 6px; color: #92978b; font-size: 10px; }
+.order-item > span, .order-item > strong { text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; }
+.order-item > strong { color: #3f5843; }
+.order-detail > footer { display: flex; justify-content: space-between; align-items: baseline; padding: 24px 30px; font-size: 12px; }
+.order-detail > footer strong { color: var(--green); font: 600 25px "Segoe UI", sans-serif; }
+.order-detail > .summary-note { padding: 0 30px 25px; }
 
 @media (min-width: 1500px) {
   .hero { min-height: 460px; }
@@ -328,6 +354,7 @@ button, a { touch-action: manipulation; }
   .cart-layout { grid-template-columns: minmax(0, 1fr); }
   .cart-summary { width: min(100%, 400px); justify-self: end; }
   .cart-product-image { width: 100px; height: 95px; }
+  .order-card { align-items: flex-start; }
 }
 @media (max-width: 600px) {
   .container { width: calc(100% - 36px); }
@@ -463,6 +490,14 @@ button, a { touch-action: manipulation; }
   /* 字号：手机购物车商品列表下方提示 */
   .cart-hint { font-size: 10px; }
   .cart-empty { padding: 50px 15px; min-height: 400px; }
+  .orders-main { min-height: calc(100vh - 250px); padding-top: 20px; padding-bottom: 38px; }
+  .order-card, .order-card > div { align-items: flex-start; flex-direction: column; }
+  .order-card > div:last-child { gap: 10px; }
+  .order-detail { margin-top: 24px; }
+  .order-detail > header, .order-detail > section { padding-inline: 20px; }
+  .order-item { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+  .order-item > div { grid-column: 1 / 3; }
+  .order-detail > footer { padding-inline: 20px; }
   /* 字号：手机空购物车或无搜索结果标题 */
   .empty-state h2, .empty-state h3 { font-size: 22px; }
 }

@@ -18,6 +18,12 @@ const authService = {
   removeSession: async () => {},
 }
 
+const orderService = {
+  create: async () => {},
+  list: async () => [],
+  get: async () => {},
+}
+
 async function withServer(app, callback) {
   const server = app.listen(0, '127.0.0.1')
   await once(server, 'listening')
@@ -34,6 +40,7 @@ function buildApp(cartService) {
     productService,
     authService,
     cartService,
+    orderService,
     sessionConfig: { cookieName: 'shiye_session', ttlDays: 7, secure: false },
   })
 }

@@ -44,6 +44,7 @@ function focusMain() {
       <nav class="main-nav" aria-label="主导航">
         <RouterLink to="/" class="nav-link" exact-active-class="current">逛逛小店</RouterLink>
         <RouterLink to="/cart" class="nav-link" exact-active-class="current">我的购物车</RouterLink>
+        <RouterLink v-if="user" to="/orders" class="nav-link" exact-active-class="current">订单记录</RouterLink>
       </nav>
       <div class="header-actions">
         <span v-if="!ready" class="account-state" aria-label="正在确认登录状态">账户…</span>

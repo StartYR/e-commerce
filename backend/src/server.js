@@ -4,6 +4,7 @@ import { createDatabasePool } from './db/pool.js'
 import { createAuthService } from './services/auth.js'
 import { createPasswordService } from './services/passwords.js'
 import { createCartService } from './services/cart.js'
+import { createOrderService } from './services/orders.js'
 import { createProductService } from './services/products.js'
 import { createSessionService } from './services/sessions.js'
 import { createUserService } from './services/users.js'
@@ -12,6 +13,7 @@ const config = readConfig()
 const pool = createDatabasePool(config.database)
 const productService = createProductService(pool)
 const cartService = createCartService(pool)
+const orderService = createOrderService(pool)
 const authService = createAuthService({
   userService: createUserService(pool),
   sessionService: createSessionService(pool, config.session),
@@ -21,6 +23,7 @@ const app = createApp({
   productService,
   authService,
   cartService,
+  orderService,
   sessionConfig: config.session,
   isProduction: config.isProduction,
   originProxySecret: config.originProxySecret,

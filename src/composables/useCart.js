@@ -140,6 +140,13 @@ function queueRemoteMutation(operation) {
 }
 
 export function useCart() {
+  function clearAfterOrder() {
+    if (!user.value) return
+    remoteLines.value = []
+    remoteLoaded = true
+    error.value = ''
+  }
+
   async function add(productId) {
     const product = products.value.find((candidate) => candidate.id === productId)
     if (!product || !product.isActive || product.stock <= 0) return false
@@ -191,5 +198,5 @@ export function useCart() {
     persistGuestCart()
   }
 
-  return { lines, count, total, storageWarning, loading, updating, error, add, setQuantity, remove }
+  return { lines, count, total, storageWarning, loading, updating, error, clearAfterOrder, add, setQuantity, remove }
 }

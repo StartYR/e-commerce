@@ -4,12 +4,14 @@ import { createOriginProxyMiddleware } from './middleware/originProxy.js'
 import { createSessionMiddleware } from './middleware/session.js'
 import { createAuthRouter } from './routes/auth.js'
 import { createCartRouter } from './routes/cart.js'
+import { createOrderRouter } from './routes/orders.js'
 import { createProductRouter } from './routes/products.js'
 
 export function createApp({
   productService,
   authService,
   cartService,
+  orderService,
   sessionConfig,
   isProduction = false,
   originProxySecret = '',
@@ -17,6 +19,7 @@ export function createApp({
   if (!productService) throw new Error('productService is required')
   if (!authService) throw new Error('authService is required')
   if (!cartService) throw new Error('cartService is required')
+  if (!orderService) throw new Error('orderService is required')
   if (!sessionConfig) throw new Error('sessionConfig is required')
 
   const app = express()
@@ -33,6 +36,7 @@ export function createApp({
   }))
   app.use('/api', createAuthRouter({ authService, cookieConfig: sessionConfig }))
   app.use('/api', createCartRouter(cartService))
+  app.use('/api', createOrderRouter(orderService))
   app.use('/api', createProductRouter(productService))
   app.use(notFoundHandler)
   app.use(errorHandler)

@@ -15,6 +15,12 @@ const cartService = {
   removeItem: async () => ({ items: [] }),
 }
 
+const orderService = {
+  create: async () => {},
+  list: async () => [],
+  get: async () => {},
+}
+
 async function withServer(app, callback) {
   const server = app.listen(0, '127.0.0.1')
   await once(server, 'listening')
@@ -27,7 +33,7 @@ async function withServer(app, callback) {
 }
 
 function buildApp(authService, sessionConfig = { cookieName: 'shiye_session', ttlDays: 7, secure: true }) {
-  return createApp({ productService, authService, cartService, sessionConfig })
+  return createApp({ productService, authService, cartService, orderService, sessionConfig })
 }
 
 test('registration sets a host-only secure session cookie', async () => {

@@ -7,6 +7,7 @@ import { createDatabasePool } from '../src/db/pool.js'
 import { createAuthService } from '../src/services/auth.js'
 import { createCartService } from '../src/services/cart.js'
 import { createPasswordService } from '../src/services/passwords.js'
+import { createOrderService } from '../src/services/orders.js'
 import { createProductService } from '../src/services/products.js'
 import { createSessionService } from '../src/services/sessions.js'
 import { createUserService } from '../src/services/users.js'
@@ -22,6 +23,7 @@ test('real MySQL supports products, authentication, sessions, and carts', async 
   const pool = createDatabasePool(config.database)
   const productService = createProductService(pool)
   const cartService = createCartService(pool)
+  const orderService = createOrderService(pool)
   const authService = createAuthService({
     userService: createUserService(pool),
     sessionService: createSessionService(pool, config.session),
@@ -30,6 +32,7 @@ test('real MySQL supports products, authentication, sessions, and carts', async 
   const app = createApp({
     productService,
     cartService,
+    orderService,
     authService,
     sessionConfig: config.session,
   })

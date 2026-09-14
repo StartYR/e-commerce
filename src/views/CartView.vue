@@ -2,10 +2,26 @@
 import AppIcon from '../components/AppIcon.vue'
 import ProductArt from '../components/ProductArt.vue'
 import { useCart } from '../composables/useCart.js'
+import { useAuth } from '../composables/useAuth.js'
+import { useOrders } from '../composables/useOrders.js'
 import { formatMoney } from '../data/products.js'
 import { MAX_QUANTITY, normalizeQuantity } from '../lib/cart.js'
+import { useRouter } from 'vue-router'
 
-const { lines, count, total, loading, updating, error, setQuantity, remove } = useCart()
+const router = useRouter()
+const { user } = useAuth()
+const { lines, count, total, loading, updating, error, clearAfterOrder, setQuantity, remove } = useCart()
+const { placing, error: orderError, place } = useOrders()
+
+async function checkout() {
+  try {
+    const order = await place()
+    clearAfterOrder()
+    await router.push(`/orders/${order.id}`)
+  } catch {
+    // Shared order and cart state expose the user-facing error.
+  }
+}
 async function changeQuantity(productId, quantity) {
   try {
     await setQuantity(productId, quantity)
@@ -37,7 +53,7 @@ async function removeItem(productId) {
   <main id="main-content" class="cart-main container" tabindex="-1">
     <RouterLink to="/" class="back-link"><AppIcon name="back" />继续逛逛</RouterLink>
     <div class="cart-heading"><div><p class="eyebrow section-eyebrow">YOUR LITTLE FINDS</p><h1>我的购物车<span>把喜欢的，先放在这里。</span></h1></div><span v-if="count" class="cart-heading-count">{{ count }} 件小欢喜</span></div>
-    <p v-if="error" class="cart-operation-error" role="alert">{{ error }}</p>
+    <p v-if="error || orderError" class="cart-operation-error" role="alert">{{ error || orderError }}</p>
     <div v-if="loading" class="empty-state cart-empty" aria-live="polite"><p>正在读取购物车…</p></div>
     <div v-else-if="lines.length" class="cart-layout">
       <section class="cart-items" aria-label="购物车商品">
@@ -54,8 +70,9 @@ async function removeItem(productId) {
         <p class="eyebrow">A LITTLE COLLECTION</p><h2 id="summary-title">你的好物清单</h2>
         <div class="summary-line"><span>已选商品</span><span>{{ lines.length }} 款 / {{ count }} 件</span></div>
         <div class="summary-total"><span>商品合计</span><strong data-testid="cart-total"><span>¥</span>{{ formatMoney(total) }}</strong></div>
-        <RouterLink to="/" class="primary-button">再逛一会儿<AppIcon name="arrow" /></RouterLink>
-        <p class="summary-note">小店目前开放浏览与选购，<br />暂未开放下单和支付。</p>
+        <button v-if="user" class="primary-button" type="button" :disabled="updating || placing" @click="checkout">{{ placing ? '正在下单…' : '确认下单' }}<AppIcon name="arrow" /></button>
+        <RouterLink v-else to="/login" class="primary-button">登录后下单<AppIcon name="arrow" /></RouterLink>
+        <p class="summary-note">提交后将生成 placed 订单，<br />当前不包含真实支付流程。</p>
       </aside>
     </div>
     <div v-else class="empty-state cart-empty"><span class="empty-icon"><AppIcon name="bag" /></span><p class="eyebrow">ROOM FOR SOMETHING LOVELY</p><h2>购物车还空着呢</h2><p>一本新笔记，一支顺手的笔，<br />去发现让你心动的第一件好物吧。</p><RouterLink to="/" class="primary-button">去逛逛小店<AppIcon name="arrow" /></RouterLink></div>

@@ -11,7 +11,7 @@
     "start": "node src/server.js",
     "test": "node --test",
     "db:setup": "node --env-file=.env scripts/setup-database.js",
-    "test:db": "node --env-file=.env --test integration/database.js"
+    "test:db": "node --env-file=.env --test integration/database.js integration/orders.js"
   },
   "dependencies": {
     "argon2": "^0.45.1",

@@ -246,3 +246,84 @@ test('登录用户使用数据库购物车，退出后恢复游客购物车', as
   await expect(page.getByRole('link', { name: '购物车，1 件商品', exact: true })).toBeVisible()
   await expect(page.getByTestId('cart-total')).toHaveText('¥12.00')
 })
+
+test('登录用户可以确认下单并查看订单详情与历史', async ({ page }) => {
+  const order = {
+    id: '27',
+    totalAmountCents: 5600,
+    status: 'placed',
+    createdAt: '2026-09-14T01:00:00.000Z',
+    items: [{
+      productId: 'notebook',
+      quantity: 2,
+      unitPriceCents: 2800,
+      name: '原野 · 布面笔记本',
+      description: 'A5 / 横线内页 / 160 页',
+    }],
+  }
+  let cartCleared = false
+
+  await page.route('**/api/auth/login', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ user: { id: '1', username: 'reader', email: 'reader@example.com' } }),
+  }))
+  await page.unroute('**/api/cart')
+  await page.route('**/api/cart', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      cart: {
+        items: cartCleared ? [] : [{
+          productId: 'notebook',
+          quantity: 2,
+          name: '原野 · 布面笔记本',
+          description: 'A5 / 横线内页 / 160 页',
+          priceCents: 2800,
+          stock: 68,
+          isActive: true,
+          categoryId: 'paper',
+          categoryName: '纸本手帐',
+        }],
+      },
+    }),
+  }))
+  await page.route('**/api/orders/27', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ order }),
+  }))
+  await page.route('**/api/orders', (route) => {
+    if (route.request().method() === 'POST') {
+      cartCleared = true
+      return route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ order }),
+      })
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ orders: [order] }),
+    })
+  })
+
+  await page.goto('/login')
+  await page.getByRole('textbox', { name: '用户名或邮箱' }).fill('reader')
+  await page.getByLabel('密码', { exact: true }).fill('password123')
+  await page.getByRole('button', { name: '登录', exact: true }).click()
+  await expect(page.getByRole('link', { name: '购物车，2 件商品', exact: true })).toBeVisible()
+
+  await page.getByRole('link', { name: '购物车，2 件商品', exact: true }).click()
+  await page.getByRole('button', { name: '确认下单', exact: true }).click()
+  await expect(page).toHaveURL(/\/orders\/27$/)
+  await expect(page.getByRole('heading', { name: '订单 #27' })).toBeVisible()
+  await expect(page.getByTestId('order-total')).toHaveText('¥56.00')
+  await expect(page.getByText('placed', { exact: true })).toBeVisible()
+
+  await page.getByRole('link', { name: '返回订单记录', exact: true }).click()
+  await expect(page).toHaveURL(/\/orders$/)
+  await expect(page.locator('[data-order-id="27"]')).toContainText('¥56.00')
+  await expect(page.getByRole('link', { name: '购物车，0 件商品', exact: true })).toBeVisible()
+})
