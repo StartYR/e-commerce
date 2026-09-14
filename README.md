@@ -62,6 +62,9 @@ npm --prefix backend run dev
 | [database/seed.sql](database/seed.sql) | 分类、商品和固定初始库存 |
 | [worker/index.js](worker/index.js) | Cloudflare Worker 的固定源站 API 代理与 Static Assets 分流 |
 | [wrangler.jsonc](wrangler.jsonc) | Worker `shop`、SPA fallback、静态资源目录和 required secret 声明 |
+| [deploy/ecommerce.service](deploy/ecommerce.service) | 以 `agent` 运行、读取受保护环境文件的 systemd 服务 |
+| [deploy/nginx-api.startyi.cn.conf](deploy/nginx-api.startyi.cn.conf) | 复用现有证书并代理到回环地址的独立 Nginx 站点 |
+| [deploy/install-backend-release.sh](deploy/install-backend-release.sh) | 无 sudo 安装生产依赖、检查后端并原子切换 release |
 
 页面使用 `/`、`/cart`、`/login`、`/register`、`/orders` 和 `/orders/:id` 等 History 路由地址。部署静态资源时，托管层需要为这些前端路由提供 SPA fallback。
 

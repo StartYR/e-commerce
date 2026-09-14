@@ -1,0 +1,33 @@
+[Unit]
+Description=Shiye Stationery API
+Wants=network-online.target
+After=network-online.target mysql.service
+Requires=mysql.service
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+WorkingDirectory=/srv/ecommerce/current/backend
+EnvironmentFile=/etc/ecommerce/backend.env
+ExecStart=/srv/ecommerce/runtime/current/bin/node src/server.js
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
+KillSignal=SIGTERM
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target
