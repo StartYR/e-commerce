@@ -8,8 +8,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test tests/cart.test.js tests/catalog.test.js && npm --prefix backend test",
-    "test:frontend": "node --test tests/cart.test.js tests/catalog.test.js",
+    "test": "node --test tests/cart.test.js tests/catalog.test.js tests/worker.test.js && npm --prefix backend test",
+    "test:frontend": "node --test tests/cart.test.js tests/catalog.test.js tests/worker.test.js",
     "test:backend": "npm --prefix backend test",
     "test:e2e": "node scripts/run-browser-tests.js",
     "test:live": "node --env-file=backend/.env scripts/run-browser-tests.js --live"

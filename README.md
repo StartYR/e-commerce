@@ -60,6 +60,8 @@ npm --prefix backend run dev
 | [src/views/RegisterView.vue](src/views/RegisterView.vue) | 注册页面 |
 | [database/schema.sql](database/schema.sql) | MySQL 表、约束、外键和索引 |
 | [database/seed.sql](database/seed.sql) | 分类、商品和固定初始库存 |
+| [worker/index.js](worker/index.js) | Cloudflare Worker 的固定源站 API 代理与 Static Assets 分流 |
+| [wrangler.jsonc](wrangler.jsonc) | Worker `shop`、SPA fallback、静态资源目录和 required secret 声明 |
 
 页面使用 `/`、`/cart`、`/login`、`/register`、`/orders` 和 `/orders/:id` 等 History 路由地址。部署静态资源时，托管层需要为这些前端路由提供 SPA fallback。
 
@@ -73,7 +75,7 @@ npm --prefix backend run test:db
 npm run test:live
 ```
 
-- `npm test`：检查前端购物车与商品目录纯函数，以及不依赖真实数据库的后端 API、配置、订单事务和 SQL 参数化行为。
+- `npm test`：检查前端购物车、商品目录、Worker 代理边界，以及不依赖真实数据库的后端 API、配置、订单事务和 SQL 参数化行为。
 - `npm run build`：生成 `dist/` 目录。
 - `npm run test:e2e`：通过 Playwright 自动启动构建产物的本地预览，检查桌面与手机尺寸下的选购流程。先执行构建；测试默认使用本机安装的 Google Chrome。使用 Edge 时，可在 PowerShell 中先执行 `$env:PLAYWRIGHT_CHANNEL = 'msedge'`。
 - `npm --prefix backend run test:db`：使用 `backend/.env` 中的限权应用账户，真实验证商品、认证、Session、购物车、订单价格快照、回滚、归属隔离和并发库存安全。
@@ -85,6 +87,8 @@ npm run test:live
 `npm run build` 生成可部署的 `dist/` 目录，构建不依赖 GitHub Pages 的 `/e-commerce/` 子路径。
 
 最终部署架构以 [deployment-plan.md](deployment-plan.md) 为准：前端静态资源由 Cloudflare Worker + Static Assets 提供，浏览器通过同源 `/api/*` 访问后端。当前数据库初始化仅针对本机开发环境，生产部署仍在后续阶段完成。
+
+`wrangler.jsonc` 只声明普通配置和必需 Secret 名称，不保存 Secret 值，也不接管已经在 Cloudflare Dashboard 绑定的 Custom Domain。
 
 ## 后续课程扩展
 
