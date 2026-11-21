@@ -11,7 +11,7 @@
     "start": "node src/server.js",
     "test": "node --test",
     "db:setup": "node --env-file=.env scripts/setup-database.js",
-    "test:db": "node --env-file=.env --test integration/database.js integration/orders.js"
+    "test:db": "node --env-file=.env --test --test-concurrency=1 integration/database.js integration/orders.js integration/stats.js"
   },
   "dependencies": {
     "argon2": "^0.45.1",

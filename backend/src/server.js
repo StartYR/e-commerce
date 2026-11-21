@@ -7,6 +7,7 @@ import { createCartService } from './services/cart.js'
 import { createOrderService } from './services/orders.js'
 import { createProductService } from './services/products.js'
 import { createSessionService } from './services/sessions.js'
+import { createStatsService } from './services/stats.js'
 import { createUserService } from './services/users.js'
 
 const config = readConfig()
@@ -24,6 +25,7 @@ const app = createApp({
   authService,
   cartService,
   orderService,
+  statsService: createStatsService(pool),
   sessionConfig: config.session,
   isProduction: config.isProduction,
   originProxySecret: config.originProxySecret,

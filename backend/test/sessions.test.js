@@ -8,7 +8,7 @@ test('stores and queries only a fixed-length session token hash', async () => {
     execute: async (sql, parameters = []) => {
       calls.push({ sql, parameters })
       return sql.includes('SELECT u.id')
-        ? [[{ id: '1', username: 'reader', email: 'reader@example.com' }], []]
+        ? [[{ id: '1', username: 'reader', email: 'reader@example.com', isAdmin: '0' }], []]
         : [{}, []]
     },
   }
@@ -24,6 +24,7 @@ test('stores and queries only a fixed-length session token hash', async () => {
 
   const user = await service.findUser(token)
   assert.equal(user.username, 'reader')
+  assert.equal(user.isAdmin, false)
   const lookup = calls.find(({ sql }) => sql.includes('SELECT u.id'))
   assert.ok(Buffer.isBuffer(lookup.parameters[0]))
   assert.equal(lookup.parameters[0].length, 32)

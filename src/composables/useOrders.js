@@ -1,7 +1,6 @@
 import { ref, watch } from 'vue'
 import { useAuth } from './useAuth.js'
 
-const orders = ref([])
 const loading = ref(false)
 const placing = ref(false)
 const error = ref('')
@@ -13,6 +12,7 @@ const ERROR_MESSAGES = {
   INSUFFICIENT_STOCK: '部分商品库存不足，请调整购物车后重试。',
   PRODUCT_UNAVAILABLE: '部分商品已下架，请调整购物车后重试。',
   ORDER_NOT_FOUND: '没有找到这笔订单。',
+  INVALID_ORDER_CURSOR: '无法继续读取订单，请刷新页面后重试。',
 }
 
 async function orderRequest(path, options = {}) {
@@ -32,25 +32,15 @@ async function orderRequest(path, options = {}) {
 }
 
 watch(user, () => {
-  orders.value = []
   loading.value = false
   placing.value = false
   error.value = ''
 })
 
 export function useOrders() {
-  async function load() {
-    loading.value = true
-    error.value = ''
-    try {
-      orders.value = (await orderRequest('/api/orders')).orders
-      return orders.value
-    } catch (loadError) {
-      error.value = loadError.message
-      throw loadError
-    } finally {
-      loading.value = false
-    }
+  function list(cursor, signal) {
+    const path = cursor ? `/api/orders?${new URLSearchParams({ cursor })}` : '/api/orders'
+    return orderRequest(path, { signal })
   }
 
   async function get(orderId) {
@@ -70,9 +60,7 @@ export function useOrders() {
     placing.value = true
     error.value = ''
     try {
-      const order = (await orderRequest('/api/orders', { method: 'POST' })).order
-      orders.value = [order, ...orders.value.filter((candidate) => candidate.id !== order.id)]
-      return order
+      return (await orderRequest('/api/orders', { method: 'POST' })).order
     } catch (placeError) {
       error.value = placeError.message
       throw placeError
@@ -81,5 +69,5 @@ export function useOrders() {
     }
   }
 
-  return { orders, loading, placing, error, load, get, place }
+  return { loading, placing, error, list, get, place }
 }

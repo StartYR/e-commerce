@@ -262,6 +262,7 @@ test('登录用户可以确认下单并查看订单详情与历史', async ({ pa
     }],
   }
   let cartCleared = false
+  let nextPageRequests = 0
 
   await page.route('**/api/auth/login', (route) => route.fulfill({
     status: 200,
@@ -305,8 +306,13 @@ test('登录用户可以确认下单并查看订单详情与历史', async ({ pa
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ orders: [order] }),
+      body: JSON.stringify({ orders: [order], nextCursor: order.id }),
     })
+  })
+  await page.route('**/api/orders?cursor=27', (route) => {
+    nextPageRequests += 1
+    if (nextPageRequests === 1) return route.fulfill({ status: 503, json: {} })
+    return route.fulfill({ json: { orders: [{ ...order, id: '26' }], nextCursor: null } })
   })
 
   await page.goto('/login')
@@ -326,4 +332,51 @@ test('登录用户可以确认下单并查看订单详情与历史', async ({ pa
   await expect(page).toHaveURL(/\/orders$/)
   await expect(page.locator('[data-order-id="27"]')).toContainText('¥56.00')
   await expect(page.getByRole('link', { name: '购物车，0 件商品', exact: true })).toBeVisible()
+
+  const loadMore = page.getByRole('button', { name: '加载更多订单' })
+  await loadMore.click()
+  await expect(page.getByRole('alert')).toHaveText('订单请求失败，请稍后再试。')
+  await expect(page.locator('.order-card')).toHaveCount(1)
+  await loadMore.click()
+  await expect(page.locator('.order-card')).toHaveCount(2)
+  await expect(page.locator('[data-order-id="26"]')).toBeVisible()
+  await expect(loadMore).toHaveCount(0)
+})
+
+test('管理员可以打开经营统计并按日期查询', async ({ page }) => {
+  await page.route('**/api/auth/me', (route) => route.fulfill({
+    json: { user: { id: '1', username: 'manager', isAdmin: true } },
+  }))
+  await page.route((url) => url.pathname === '/api/admin/stats', (route) => {
+    const from = new URL(route.request().url()).searchParams.get('from') || '2024-05-20'
+    const daily = from === '2024-05-20' ? [{ date: from, orderCount: '2', amountCents: '9700' }] : []
+    const products = daily.length ? [{ productId: 'notebook', name: '笔记本', unitsSold: '3', amountCents: '8200' }] : []
+    return route.fulfill({ json: { from, to: '2024-05-21', timeZone: '+08:00', daily, products } })
+  })
+
+  await page.goto('/')
+  await page.getByRole('link', { name: '经营统计', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '经营统计', exact: true })).toBeVisible()
+  await expect(page.getByRole('table', { name: '每日订单' })).toContainText('¥97.00')
+  await expect(page.getByRole('table', { name: '商品销量' })).toContainText('¥82.00')
+  await expect(page.getByLabel('开始日期')).toHaveValue('2024-05-20')
+
+  await page.getByLabel('开始日期').fill('2024-05-21')
+  const request = page.waitForRequest((request) => new URL(request.url()).pathname === '/api/admin/stats')
+  await page.getByRole('button', { name: '查询', exact: true }).click()
+  const parameters = new URL((await request).url()).searchParams
+  expect(parameters.get('from')).toBe('2024-05-21')
+  expect(parameters.get('to')).toBe('2024-05-21')
+  await expect(page.getByRole('status')).toHaveText('这个日期范围内没有已下单订单。')
+})
+
+test('普通用户直接打开经营统计时看不到统计内容', async ({ page }) => {
+  await page.route('**/api/auth/me', (route) => route.fulfill({
+    json: { user: { id: '2', username: 'reader', isAdmin: false } },
+  }))
+
+  await page.goto('/admin/stats')
+  await expect(page.getByRole('heading', { name: '只有管理员可以查看经营统计' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '经营统计', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('table')).toHaveCount(0)
 })

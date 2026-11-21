@@ -1,6 +1,7 @@
 import { HttpError } from '../middleware/errors.js'
 
 const ORDER_STATUS = 'placed'
+const ORDER_PAGE_SIZE = 20
 
 const ORDER_COLUMNS = `
   o.id,
@@ -47,17 +48,7 @@ function groupOrders(orderRows, itemRows) {
   return orders
 }
 
-async function readOrders(executor, userId, orderId = null) {
-  const parameters = [userId]
-  const orderFilter = orderId === null ? '' : 'AND o.id = ?'
-  if (orderId !== null) parameters.push(orderId)
-
-  const [orderRows] = await executor.execute(`
-    SELECT ${ORDER_COLUMNS}
-    FROM orders AS o
-    WHERE o.user_id = ? ${orderFilter}
-    ORDER BY o.created_at DESC, o.id DESC
-  `, parameters)
+async function readOrdersWithItems(executor, orderRows) {
   if (orderRows.length === 0) return []
 
   const placeholders = orderRows.map(() => '?').join(', ')
@@ -71,10 +62,37 @@ async function readOrders(executor, userId, orderId = null) {
   return groupOrders(orderRows, itemRows)
 }
 
+async function readOrder(executor, userId, orderId) {
+  const [orderRows] = await executor.execute(`
+    SELECT ${ORDER_COLUMNS}
+    FROM orders AS o
+    WHERE o.user_id = ? AND o.id = ?
+  `, [userId, orderId])
+  const [order] = await readOrdersWithItems(executor, orderRows)
+  return order
+}
+
 function validateOrderId(orderId) {
   if (typeof orderId !== 'string' || !/^[1-9]\d{0,19}$/.test(orderId)) {
     throw new HttpError(404, 'ORDER_NOT_FOUND', 'Order not found')
   }
+}
+
+async function readCursorTime(executor, userId, cursor) {
+  const invalidCursor = () => new HttpError(400, 'INVALID_ORDER_CURSOR', 'Invalid order cursor')
+  if (typeof cursor !== 'string' || !/^[1-9]\d{0,19}$/.test(cursor)
+    || BigInt(cursor) > 18446744073709551615n) {
+    throw invalidCursor()
+  }
+
+  // 保留 MySQL 时间戳的微秒精度，避免分页边界丢失订单。
+  const [[row]] = await executor.execute(`
+    SELECT CAST(created_at AS CHAR) AS cursorTime
+    FROM orders
+    WHERE id = CAST(? AS UNSIGNED) AND user_id = ?
+  `, [cursor, userId])
+  if (!row) throw invalidCursor()
+  return row.cursorTime
 }
 
 async function inTransaction(pool, operation) {
@@ -98,15 +116,34 @@ async function inTransaction(pool, operation) {
 
 export function createOrderService(pool) {
   return {
-    list(userId) {
-      return readOrders(pool, userId)
+    async list(userId, cursor) {
+      const parameters = [userId]
+      let cursorFilter = ''
+      if (cursor !== undefined) {
+        const cursorTime = await readCursorTime(pool, userId, cursor)
+        cursorFilter = 'AND (o.created_at < ? OR (o.created_at = ? AND o.id < CAST(? AS UNSIGNED)))'
+        parameters.push(cursorTime, cursorTime, cursor)
+      }
+
+      const [orderRows] = await pool.execute(`
+        SELECT ${ORDER_COLUMNS}
+        FROM orders AS o
+        WHERE o.user_id = ? ${cursorFilter}
+        ORDER BY o.created_at DESC, o.id DESC
+        LIMIT ${ORDER_PAGE_SIZE + 1}
+      `, parameters)
+      const orders = await readOrdersWithItems(pool, orderRows.slice(0, ORDER_PAGE_SIZE))
+      return {
+        orders,
+        nextCursor: orderRows.length > ORDER_PAGE_SIZE ? orders.at(-1).id : null,
+      }
     },
 
     async get(userId, orderId) {
       validateOrderId(orderId)
-      const orders = await readOrders(pool, userId, orderId)
-      if (!orders[0]) throw new HttpError(404, 'ORDER_NOT_FOUND', 'Order not found')
-      return orders[0]
+      const order = await readOrder(pool, userId, orderId)
+      if (!order) throw new HttpError(404, 'ORDER_NOT_FOUND', 'Order not found')
+      return order
     },
 
     create(userId) {
@@ -186,8 +223,7 @@ export function createOrderService(pool) {
           WHERE id = ?
         `, [cartId])
 
-        const orders = await readOrders(connection, userId, orderId)
-        return orders[0]
+        return readOrder(connection, userId, orderId)
       })
     },
   }

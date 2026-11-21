@@ -96,8 +96,13 @@ Worker 不连接数据库，不验证用户 Session，不计算价格或库存�
 | PUT | `/api/cart/items/:productId` | 是 | 设置商品数量（1–99） |
 | DELETE | `/api/cart/items/:productId` | 是 | 移除购物车商品 |
 | POST | `/api/orders` | 是 | 从当前购物车创建订单 |
-| GET | `/api/orders` | 是 | 查询当前用户订单 |
+| GET | `/api/orders` | 是 | 分页查询当前用户订单，每页至多 20 笔 |
 | GET | `/api/orders/:id` | 是 | 查询当前用户拥有的订单 |
+| GET | `/api/admin/stats` | 管理员 | 查询每日订单和商品销量 |
+
+订单列表返回 `{ orders, nextCursor }`，按 `created_at DESC, id DESC` 排序。首屏直接请求 `/api/orders`，下一页将 `nextCursor` 作为 `cursor` 查询参数传回。`nextCursor` 为 `null` 时已到最后一页。
+
+经营统计默认查询 UTC+8 的最近 30 天，也可传入 `from`、`to` 指定最多 31 天的闭区间。未登录请求返回 `401`，普通用户返回 `403`。返回体中的金额单位为分，计数和金额使用十进制字符串。
 
 API 错误使用有限的 JSON 错误码；未预期错误不会向客户端返回内部异常细节。
 

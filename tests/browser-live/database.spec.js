@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readConfig } from '../../backend/src/config/env.js'
 import { createDatabasePool } from '../../backend/src/db/pool.js'
 
-test('真实 MySQL 支撑商品、Session、登录购物车和订单页面流程', async ({ page }) => {
+test('真实 MySQL 支撑下单、订单记录和管理员经营统计', async ({ page }) => {
   const suffix = `${Date.now()}_${process.pid}`
   const username = `browser_${suffix}`
   const email = `${username}@example.test`
@@ -65,6 +65,14 @@ test('真实 MySQL 支撑商品、Session、登录购物车和订单页面流程
     await page.getByRole('link', { name: '返回订单记录', exact: true }).click()
     await expect(page.locator(`[data-order-id="${orderId}"]`)).toBeVisible()
     await expect(page.getByRole('link', { name: '购物车，0 件商品', exact: true })).toBeVisible()
+
+    await page.goto('/admin/stats')
+    await expect(page.getByRole('heading', { name: '只有管理员可以查看经营统计' })).toBeVisible()
+    await pool.execute('INSERT INTO admin_users (user_id) VALUES (?)', [userId])
+    await page.reload()
+    await expect(page.getByRole('link', { name: '经营统计', exact: true })).toBeVisible()
+    await expect(page.getByRole('table', { name: '每日订单' })).toBeVisible()
+    await expect(page.getByRole('table', { name: '商品销量' })).toContainText('原野 · 布面笔记本')
   } finally {
     try {
       if (originalStock !== undefined) {

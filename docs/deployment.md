@@ -160,6 +160,7 @@ ssh aliyun-agent "sudo -n /usr/local/sbin/ecommerce-safe-restart"
 
 - 本地初始化：使用 `npm --prefix backend run db:setup` 和管理员 login-path `ecommerce-setup`。
 - 生产建库、账户授权、DDL 或数据恢复：由管理员审核并使用管理员凭据手动执行。
+- 从第一版升级时，在更新后端之前执行 `schema.sql`，创建 `admin_users` 和 `placed_order_items` 视图。现有用户初始均无商店管理员资格，需要另行授权。
 - `seed.sql` 重复执行不会重置库存，但仍不应被当成无审查的日常生产发布步骤。
 
 ## 系统配置变更

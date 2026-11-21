@@ -50,6 +50,7 @@ function focusMain() {
         <span v-if="!ready" class="account-state" aria-label="正在确认登录状态">账户…</span>
         <template v-else-if="user">
           <span class="account-name">{{ user.username }}</span>
+          <RouterLink v-if="user.isAdmin" to="/admin/stats" class="account-action">经营统计</RouterLink>
           <button class="account-action" type="button" @click="signOut">退出</button>
         </template>
         <RouterLink v-else to="/login" class="account-action">登录</RouterLink>

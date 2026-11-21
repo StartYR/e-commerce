@@ -4,6 +4,7 @@ function publicUser(row) {
     id: String(row.id),
     username: row.username,
     email: row.email,
+    isAdmin: Number(row.isAdmin) === 1,
   }
 }
 
@@ -14,14 +15,16 @@ export function createUserService(pool) {
         INSERT INTO users (username, email, password_hash)
         VALUES (?, ?, ?)
       `, [username, email, passwordHash])
-      return { id: String(result.insertId), username, email }
+      return publicUser({ id: result.insertId, username, email })
     },
 
     async findForLogin(login) {
       const [rows] = await pool.execute(`
-        SELECT id, username, email, password_hash AS passwordHash
-        FROM users
-        WHERE username = ? OR email = ?
+        SELECT u.id, u.username, u.email, u.password_hash AS passwordHash,
+               a.user_id IS NOT NULL AS isAdmin
+        FROM users AS u
+        LEFT JOIN admin_users AS a ON a.user_id = u.id
+        WHERE u.username = ? OR u.email = ?
         LIMIT 1
       `, [login, login])
       return rows[0] || null
@@ -29,9 +32,10 @@ export function createUserService(pool) {
 
     async findPublicById(userId) {
       const [rows] = await pool.execute(`
-        SELECT id, username, email
-        FROM users
-        WHERE id = ?
+        SELECT u.id, u.username, u.email, a.user_id IS NOT NULL AS isAdmin
+        FROM users AS u
+        LEFT JOIN admin_users AS a ON a.user_id = u.id
+        WHERE u.id = ?
         LIMIT 1
       `, [userId])
       return publicUser(rows[0])

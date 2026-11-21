@@ -18,6 +18,7 @@ const router = createRouter({
     { path: '/register', component: RegisterView, meta: { title: '创建账号 · 拾页' } },
     { path: '/orders', component: OrdersView, meta: { title: '我的订单 · 拾页' } },
     { path: '/orders/:id', component: OrderView, meta: { title: '订单详情 · 拾页' } },
+    { path: '/admin/stats', component: () => import('./views/AdminStatsView.vue'), meta: { title: '经营统计 · 拾页' } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior: () => ({ top: 0 }),

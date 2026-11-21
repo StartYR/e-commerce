@@ -63,12 +63,12 @@ test('all order routes require a valid server session', async () => {
   assert.equal(calls, 0)
 })
 
-test('order routes pass only the authenticated user and requested id to the service', async () => {
+test('order routes pass the authenticated user and forward the pagination cursor', async () => {
   const calls = []
   const order = { id: '7', totalAmountCents: 2800, status: 'placed', items: [] }
   const orderService = {
     create: async (userId) => { calls.push(['create', userId]); return order },
-    list: async (userId) => { calls.push(['list', userId]); return [order] },
+    list: async (userId, cursor) => { calls.push(['list', userId, cursor]); return { orders: [order], nextCursor: null } },
     get: async (userId, orderId) => { calls.push(['get', userId, orderId]); return order },
   }
   const headers = { Cookie: 'shiye_session=known-token' }
@@ -78,14 +78,14 @@ test('order routes pass only the authenticated user and requested id to the serv
     assert.equal(createResponse.status, 201)
     assert.deepEqual(await createResponse.json(), { order })
 
-    const listResponse = await fetch(`${baseUrl}/api/orders`, { headers })
+    const listResponse = await fetch(`${baseUrl}/api/orders?cursor=11&userId=17`, { headers })
     assert.equal(listResponse.status, 200)
-    assert.deepEqual(await listResponse.json(), { orders: [order] })
+    assert.deepEqual(await listResponse.json(), { orders: [order], nextCursor: null })
 
     const detailResponse = await fetch(`${baseUrl}/api/orders/7`, { headers })
     assert.equal(detailResponse.status, 200)
     assert.deepEqual(await detailResponse.json(), { order })
   })
 
-  assert.deepEqual(calls, [['create', '42'], ['list', '42'], ['get', '42', '7']])
+  assert.deepEqual(calls, [['create', '42'], ['list', '42', '11'], ['get', '42', '7']])
 })

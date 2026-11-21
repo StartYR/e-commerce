@@ -116,6 +116,8 @@ sudo -n /usr/local/sbin/ecommerce-safe-restart
 
 ## 当前未实现的安全能力
 
-当前没有显式 CSRF Token、登录限流/账户锁定、MFA、邮箱验证、密码找回、管理后台或真实支付。`SameSite=Lax` 和 Host-only Cookie 是现有 CSRF/作用域保护，但不能在文档中声称已经实现独立 CSRF Token。任何新增能力应先重新评估信任边界。
+当前没有显式 CSRF Token、登录限流/账户锁定、MFA、邮箱验证、密码找回或真实支付。`SameSite=Lax` 和 Host-only Cookie 是现有 CSRF/作用域保护，但不能在文档中声称已经实现独立 CSRF Token。任何新增能力应先重新评估信任边界。
+
+经营统计接口要求有效 Session 和 `admin_users` 成员身份。注册和登录不会按照客户端提交的字段授予身份。统计响应声明 `Cache-Control: no-store`，内容仅含汇总值。
 
 [返回项目入口](../README.md) · [架构](architecture.md) · [部署](deployment.md) · [运维](operations.md)

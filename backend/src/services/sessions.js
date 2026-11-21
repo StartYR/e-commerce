@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
+import { publicUser } from './users.js'
 
 function hashToken(token) {
   return createHash('sha256').update(token, 'utf8').digest()
@@ -21,18 +22,14 @@ export function createSessionService(pool, { ttlDays }) {
 
     async findUser(token) {
       const [rows] = await pool.execute(`
-        SELECT u.id, u.username, u.email
+        SELECT u.id, u.username, u.email, a.user_id IS NOT NULL AS isAdmin
         FROM sessions AS s
         INNER JOIN users AS u ON u.id = s.user_id
+        LEFT JOIN admin_users AS a ON a.user_id = u.id
         WHERE s.token_hash = ? AND s.expires_at > UTC_TIMESTAMP(6)
         LIMIT 1
       `, [hashToken(token)])
-      if (!rows[0]) return null
-      return {
-        id: String(rows[0].id),
-        username: rows[0].username,
-        email: rows[0].email,
-      }
+      return publicUser(rows[0])
     },
 
     async remove(token) {

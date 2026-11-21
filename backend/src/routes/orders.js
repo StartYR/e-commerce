@@ -17,7 +17,7 @@ export function createOrderRouter(orderService) {
   }))
 
   router.get('/orders', asyncRoute(async (request, response) => {
-    response.json({ orders: await orderService.list(request.user.id) })
+    response.json(await orderService.list(request.user.id, request.query.cursor))
   }))
 
   router.get('/orders/:id', asyncRoute(async (request, response) => {

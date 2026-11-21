@@ -18,6 +18,14 @@ CREATE TABLE IF NOT EXISTS users (
   CONSTRAINT chk_users_email_not_blank CHECK (CHAR_LENGTH(TRIM(email)) >= 3)
 ) ENGINE = InnoDB;
 
+CREATE TABLE IF NOT EXISTS admin_users (
+  user_id BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (user_id),
+  CONSTRAINT fk_admin_users_user
+    FOREIGN KEY (user_id) REFERENCES users (id)
+    ON UPDATE RESTRICT ON DELETE CASCADE
+) ENGINE = InnoDB;
+
 CREATE TABLE IF NOT EXISTS sessions (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,
@@ -122,3 +130,9 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (product_id) REFERENCES products (id)
     ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE = InnoDB;
+
+CREATE OR REPLACE SQL SECURITY INVOKER VIEW placed_order_items AS
+SELECT o.id AS order_id, o.created_at AS ordered_at, oi.product_id, oi.quantity, oi.unit_price_cents
+FROM orders AS o
+INNER JOIN order_items AS oi ON oi.order_id = o.id
+WHERE o.status = 'placed';

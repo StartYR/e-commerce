@@ -159,7 +159,9 @@ test('real MySQL orders preserve snapshots, ownership, rollback, and concurrent 
 
     const listResponse = await fetch(`${baseUrl}/api/orders`, { headers: { Cookie: owner.cookie } })
     assert.equal(listResponse.status, 200)
-    const listedOrder = (await listResponse.json()).orders.find((order) => order.id === placedOrder.id)
+    const firstList = await listResponse.json()
+    assert.equal(firstList.nextCursor, null)
+    const listedOrder = firstList.orders.find((order) => order.id === placedOrder.id)
     assert.ok(listedOrder)
     assert.equal(listedOrder.items[0].unitPriceCents, 2800)
 
@@ -191,7 +193,48 @@ test('real MySQL orders preserve snapshots, ownership, rollback, and concurrent 
     assert.equal((await forbiddenDetail.json()).error.code, 'ORDER_NOT_FOUND')
     const otherList = await fetch(`${baseUrl}/api/orders`, { headers: { Cookie: other.cookie } })
     assert.equal(otherList.status, 200)
-    assert.deepEqual((await otherList.json()).orders, [])
+    assert.deepEqual(await otherList.json(), { orders: [], nextCursor: null })
+
+    const ownerHeaders = { Cookie: owner.cookie }
+    const timestamps = [
+      ...Array(17).fill('2024-01-01 00:00:00.900000'),
+      ...Array(4).fill('2024-01-01 00:00:00.123456'),
+      '2024-01-01 00:00:00.100001',
+    ]
+    await pool.execute(`
+      INSERT INTO orders (user_id, total_amount_cents, created_at)
+      VALUES ${timestamps.map(() => '(?, 0, ?)').join(', ')}
+    `, timestamps.flatMap((timestamp) => [owner.user.id, timestamp]))
+    const [expectedOrders] = await pool.execute(`
+      SELECT id FROM orders WHERE user_id = ? ORDER BY created_at DESC, id DESC
+    `, [owner.user.id])
+
+    const firstPageResponse = await fetch(`${baseUrl}/api/orders`, { headers: ownerHeaders })
+    assert.equal(firstPageResponse.status, 200)
+    const firstPage = await firstPageResponse.json()
+    assert.equal(firstPage.orders.length, 20)
+    assert.equal(firstPage.nextCursor, firstPage.orders.at(-1).id)
+
+    const nextPageUrl = `${baseUrl}/api/orders?cursor=${firstPage.nextCursor}`
+    const nextPageResponse = await fetch(nextPageUrl, { headers: ownerHeaders })
+    assert.equal(nextPageResponse.status, 200)
+    const nextPage = await nextPageResponse.json()
+    assert.equal(nextPage.nextCursor, null)
+    assert.deepEqual(
+      [...firstPage.orders, ...nextPage.orders].map(({ id }) => id),
+      expectedOrders.map(({ id }) => String(id)),
+    )
+
+    const invalidCursors = await Promise.all([
+      fetch(nextPageUrl, { headers: { Cookie: other.cookie } }),
+      fetch(`${baseUrl}/api/orders?cursor=18446744073709551615`, { headers: ownerHeaders }),
+      fetch(`${baseUrl}/api/orders?cursor=18446744073709551616`, { headers: ownerHeaders }),
+      fetch(`${nextPageUrl}&cursor=${firstPage.nextCursor}`, { headers: ownerHeaders }),
+    ])
+    for (const response of invalidCursors) {
+      assert.equal(response.status, 400)
+      assert.equal((await response.json()).error.code, 'INVALID_ORDER_CURSOR')
+    }
 
     await setCartItem(baseUrl, owner.cookie, 'notebook', 9)
     const [ordersBeforeFailure] = await pool.execute(

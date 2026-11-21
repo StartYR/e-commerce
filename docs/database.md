@@ -7,6 +7,7 @@
 ```mermaid
 erDiagram
     USERS ||--o{ SESSIONS : owns
+    USERS ||--o| ADMIN_USERS : may_be_granted
     USERS ||--o| CARTS : owns
     CARTS ||--o{ CART_ITEMS : contains
     CATEGORIES ||--o{ PRODUCTS : classifies
@@ -29,6 +30,9 @@ erDiagram
         BINARY token_hash UK
         DATETIME expires_at
         TIMESTAMP created_at
+    }
+    ADMIN_USERS {
+        BIGINT user_id PK, FK
     }
     CATEGORIES {
         VARCHAR id PK
@@ -74,6 +78,7 @@ erDiagram
 | 表 | 作用 | 关键约束与索引 |
 | --- | --- | --- |
 | `users` | 账户 | 用户名、邮箱唯一；保存 Argon2id `password_hash` |
+| `admin_users` | 商店管理员资格 | `user_id` 同时为主键和外键；随用户删除 |
 | `sessions` | 服务端登录会话 | `token_hash` 唯一；索引 `user_id`、`expires_at`；用户删除时级联删除 |
 | `categories` | 商品分类 | 稳定字符串主键，分类名唯一 |
 | `products` | 商品业务数据 | 分类外键；库存和价格非负；`(category_id, is_active)`、`(is_active, name)` 索引 |
@@ -129,13 +134,19 @@ MySQL 是以下业务字段的唯一数据源：
 
 订单列表和详情查询都把认证用户 ID 作为条件。详情查询同时约束 `o.user_id = ?` 和 `o.id = ?`；用户不能读取其他用户的订单，非法 ID 和非本人订单统一表现为未找到。
 
+## 经营统计
+
+- 每日订单直接按 `orders` 聚合，每笔 `placed` 订单计一次。下单金额使用订单总额。筛选采用 UTC+8 的左闭右开时间区间，可使用 `(status, created_at)` 索引。
+- 商品统计通过 `placed_order_items` 视图读取已下单明细。销量累加件数，金额累加 `quantity × unit_price_cents`。展示名称读取商品的当前名称。
+- 两份汇总使用同一次只读事务的快照，避免统计过程中并发下单造成口径不一致。MySQL 按整数分聚合并返回十进制字符串。
+
 ## Session 数据
 
 Session 明文 Token 由服务端以 32 字节随机数生成，只通过 Host-only Cookie 交给浏览器。数据库只存储 SHA-256 后的固定 32 字节 `token_hash`。查询要求 `expires_at > UTC_TIMESTAMP(6)`；创建新 Session 时会清理已过期行，退出时按 Token 哈希删除当前 Session。
 
 ## Schema 与 seed
 
-- [`database/schema.sql`](../database/schema.sql) 使用 `CREATE DATABASE/TABLE IF NOT EXISTS` 建立当前结构。
+- [`database/schema.sql`](../database/schema.sql) 使用 `CREATE DATABASE/TABLE IF NOT EXISTS` 建立表，并定义 `placed_order_items` 统计视图。
 - [`database/seed.sql`](../database/seed.sql) 固定写入 4 个分类和 12 件商品；初始库存值只生成过一次，SQL 中没有 `RAND()`。
 - seed 重复执行时会更新分类以及商品的分类、名称、描述、价格和可售状态，但故意不覆盖现有 `stock`，因为初始化后库存由数据库和下单事务维护。
 - 当前仓库没有版本化 migration 框架或 migration 目录。`schema.sql` 与 `seed.sql` 是初始化入口，不应被误认为完整的生产迁移历史。
@@ -157,6 +168,8 @@ SELECT, INSERT, UPDATE, DELETE ON ecommerce.*
 ```
 
 应用账户没有 DDL、GRANT 或全局管理权限。生产建库、结构变化、账户管理和数据恢复属于管理员操作，不应让 Express 使用 root 凭据。
+
+商店管理员由数据库运维人员为已注册用户授予。向 `admin_users` 插入该用户的 ID 即可授权，删除对应行即可撤销。后端每次解析 Session 时重新查询该关系，权限变更对已有 Session 生效。
 
 ## 验证命令
 

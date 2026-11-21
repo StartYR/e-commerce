@@ -6,12 +6,14 @@ import { createAuthRouter } from './routes/auth.js'
 import { createCartRouter } from './routes/cart.js'
 import { createOrderRouter } from './routes/orders.js'
 import { createProductRouter } from './routes/products.js'
+import { createStatsRouter } from './routes/stats.js'
 
 export function createApp({
   productService,
   authService,
   cartService,
   orderService,
+  statsService,
   sessionConfig,
   isProduction = false,
   originProxySecret = '',
@@ -38,6 +40,7 @@ export function createApp({
   app.use('/api', createCartRouter(cartService))
   app.use('/api', createOrderRouter(orderService))
   app.use('/api', createProductRouter(productService))
+  if (statsService) app.use('/api/admin', createStatsRouter(statsService))
   app.use(notFoundHandler)
   app.use(errorHandler)
 
